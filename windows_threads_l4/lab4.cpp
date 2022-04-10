@@ -17,6 +17,7 @@ typedef struct IntegralInfo {
     double start;
     double finish;
     int deg_of_pol;
+    int stepCount;
     double* resoult;
 };
 
@@ -36,13 +37,13 @@ double calculateIntegral(double start, double finish, int degree, int stepCount)
 
 DWORD WINAPI doStuff(void* argumenty) {
     IntegralInfo* dane = (IntegralInfo*)argumenty;
-    double res = calculateIntegral(dane->start, dane->finish, dane->deg_of_pol, 500);
+    double res = calculateIntegral(dane->start, dane->finish, dane->deg_of_pol, dane->stepCount);
     dane->resoult = new double(res);
     return 0;
-    //ExitThread(1);
+    ExitThread(1);
 }
 
-void calculateIntegralUsingThreads(int tCount, int start, int finish, int deg) {
+void calculateIntegralUsingThreads(int tCount, int start, int finish, int deg, int stepCount) {
     DWORD id; // identyfikator watku
 
     double section = finish - start;
@@ -54,8 +55,9 @@ void calculateIntegralUsingThreads(int tCount, int start, int finish, int deg) {
     for (int i = 0; i < tCount; i++) {
         data[i].deg_of_pol = deg;
         data[i].start = start + i * part;
-        data[i].finish = start + (i+1) * part;
-        
+        data[i].finish = start + (i + 1) * part;
+        data[i].stepCount = stepCount / tCount;
+
     }
 
     for (int i = 0; i < tCount; i++)
@@ -72,8 +74,9 @@ void calculateIntegralUsingThreads(int tCount, int start, int finish, int deg) {
 
         }
     }
+    WaitForMultipleObjects(tCount, watki, true, INFINITE);
     for (size_t i = 0; i < tCount; i++) {
-        WaitForSingleObject(watki[i], 5000000);
+        //WaitForSingleObject(watki[i], 5000000);
         CloseHandle(watki[i]);
         resoult += *data[i].resoult;
     }
@@ -88,10 +91,10 @@ int main() {
     // ZADANIE NA 5
     /*STARTUPINFO si = {sizeof(si)};
     PROCESS_INFORMATION pi;
-    
+
     TCHAR program[] = TEXT("notepad");
 
-    // Start the child process. 
+    // Start the child process.
     if (!CreateProcess(NULL, program, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi) ) {
         printf("CreateProcess failed (%d).\n", GetLastError());
         return -1;
@@ -100,43 +103,50 @@ int main() {
     // Wait until child process exits.
     WaitForSingleObject(pi.hProcess, INFINITE);
 
-    // Close process and thread handles. 
+    // Close process and thread handles.
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
     */
 
 
 
-    int threadsNumber[10];
-    int allDurrations[10];
+    int threadsNumber[20];
+    int allDurrations[20];
     auto start = high_resolution_clock::now();
-    calculateIntegralUsingThreads(2, 0, 10, 3);
+    calculateIntegralUsingThreads(1, 0, 5, 3, 500000);
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(stop - start);
     allDurrations[0] = duration.count();
-    threadsNumber[0] = 2;
+    threadsNumber[0] = 1;
+
     start = high_resolution_clock::now();
-    calculateIntegralUsingThreads(4, 0, 10, 3);
+    calculateIntegralUsingThreads(2, 0, 5, 3, 500000);
     stop = high_resolution_clock::now();
     duration = duration_cast<microseconds>(stop - start);
     allDurrations[1] = duration.count();
-    threadsNumber[1] = 4;
+    threadsNumber[1] = 2;
 
-    for (int i = 2; i < 10; i++) {
-        int threadsNb = 3 + i;
+    start = high_resolution_clock::now();
+    calculateIntegralUsingThreads(4, 0, 5, 3, 500000);
+    stop = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(stop - start);
+    allDurrations[2] = duration.count();
+    threadsNumber[2] = 4;
+
+    for (int i = 3; i < 20; i++) {
+        int threadsNb = 2 + i;
         start = high_resolution_clock::now();
-        calculateIntegralUsingThreads(threadsNb, 0, 10, 3);
+        calculateIntegralUsingThreads(threadsNb, 0, 5, 3, 500000);
         stop = high_resolution_clock::now();
         duration = duration_cast<microseconds>(stop - start);
         allDurrations[i] = duration.count();
         threadsNumber[i] = threadsNb;
     }
-    printf("\n threads number: \t");
-    for (int i = 0; i < 10; i++) {
+    printf("\n thread number: \t");
+    for (int i = 0; i < 20; i++) 
         printf("%d\t", threadsNumber[i]);
-    }
-    printf("\n threads time:   \t");
-    for (int i = 0; i < 10; i++) {
+    
+    printf("\n thread time:   \t");
+    for (int i = 0; i < 20; i++) 
         printf("%d\t", allDurrations[i]);
-    }
 }
